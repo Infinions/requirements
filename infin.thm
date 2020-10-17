@@ -29,6 +29,7 @@
 
 <node visible="no">
    <type name="Budget"/>
+   <type name="System"/>
 </node>
 
 <node visible="yes" hideunconnected="yes" shape="Trapezoid" color="Red">

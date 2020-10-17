@@ -4,7 +4,8 @@ sig User {} {
 
 sig Tag {} {
 	one e : Company | this in e.tags -- tags must be associated with ONE company
-}
+	one i : Invoice | this in i.tags -- tags must be associated with ONE invoice
+} 
 
 sig Category {
 	budget: lone Budget
@@ -21,12 +22,18 @@ sig Company {
 	users: set User,
 	categories: set Category,
 	tags: set Tag
+} {
+	Company = System.companies
 }
 
 sig Invoice {
 	company: one Company,
 	category: lone Category,
 	tags: set Tag
+}
+
+one sig System {
+	companies: set Company
 }
 
 fact "invoice tags must be tags from the company" {
@@ -46,6 +53,10 @@ fact "budgests aren't shared" {
 }
 
 run { } for 4
+
+check NoOrphanTags {
+	all t : Tag | some i : Invoice | t in i.tags
+}
 
 check UsersBelongToOnlyOneCompany {
 	all disj e1, e2 : Company | no e1.users & e2.users
