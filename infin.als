@@ -45,7 +45,7 @@ fact "budgests aren't shared" {
 	all disj c, d : Category | c.budget != d.budget
 }
 
-run { } for 3
+run { } for 4
 
 check UsersBelongToOnlyOneCompany {
 	all disj e1, e2 : Company | no e1.users & e2.users
