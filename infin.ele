@@ -1,0 +1,118 @@
+-- signatures
+one sig System {
+	var companies: set Company
+}
+
+sig User {}
+sig Tag {}
+sig Budget {} 
+
+sig Category {
+	budget: lone Budget
+} 
+
+sig Company {
+	var users: set User,
+	categories: set Category,
+	tags: set Tag
+} 
+
+sig Invoice {
+	company: one Company,
+	category: lone Category,
+	tags: set Tag
+}
+
+-- facts
+-- fact "invoice tags must be tags from the company" {
+-- 	all s : System | all i : Invoice | i.company in s.companies implies i.tags in i.company.tags
+-- }
+
+-- fact "invoice categories must be categories from the company" {
+-- 	all s : System | all i : Invoice | i.company in s.companies implies i.category in i.company.categories
+-- }
+
+-- fact "a company must have a least one user" {
+-- 	all s : System | all e : Company | e in s.companies implies some e.users
+-- }
+
+-- fact "budgests aren't shared" {
+--	all s : System | all disj c, d : Category | (c + d) in s.companies.categories implies c.budget != d.budget
+-- }
+
+
+pred emptyCompany[c : Company] {
+	some c
+	no c.tags -- new company must be empty
+	no c.categories	 -- new company must be empty
+	no c.users -- new company must be empty
+	c not in System.companies
+}
+
+pred userNotRegistered[u : User] {
+	u not in System.companies.users
+}
+
+-- actions
+pred stutter {
+	System.companies' = System.companies
+	Company.users' = Company.users
+}	
+	
+pred registerUser[u : User, c : Company] {
+	emptyCompany[c]
+	userNotRegistered[u]
+	
+	c.users' = u
+	System.companies' = System.companies + c
+
+	Company.users' = Company.users + u
+}
+
+pred addUserToCompany[u : User, c : Company] {
+	userNotRegistered[u]
+	c in System.companies -- Company must exist
+
+	c.users' = c.users + u
+	
+	Company.users' = Company.users + u
+	System.companies' = System.companies
+}
+
+fact traces {
+	no System.companies
+
+	no Invoice
+	no Category
+	no Budget
+	no Tag
+
+	always (
+		some u : User | some c : Company |
+		registerUser[u, c] or addUserToCompany[u, c] or
+		stutter
+	)
+}
+
+run { } for 3
+
+
+-- checks
+check NoOrphanTags {
+	all t : Tag | some i : Invoice | t in i.tags
+}
+
+check UsersBelongToOnlyOneCompany {
+	all disj e1, e2 : Company | no e1.users & e2.users
+}
+
+check TagsBelongToOnlyOneCompany" {
+	all disj e1, e2 : Company | no e1.tags & e2.tags
+}
+
+check CategoriesBelongToOnlyOneCompany" {
+	all disj e1, e2 : Company | no e1.categories & e2.categories
+}
+
+
+
