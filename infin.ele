@@ -102,21 +102,18 @@ run { } for 3
 
 
 -- checks
-check NoOrphanTags {
-	all t : Tag | some i : Invoice | t in i.tags
-}
+-- check NoOrphanTags {
+-- 	all t : Tag | some i : Invoice | t in i.tags
+-- }
 
-check UsersBelongToOnlyOneCompany {
-	all disj e1, e2 : Company | no e1.users & e2.users
-}
+-- check UsersBelongToOnlyOneCompany {
+-- 	all disj e1, e2 : Company | no e1.users & e2.users
+-- }
 
-check TagsBelongToOnlyOneCompany" {
-	all disj e1, e2 : Company | no e1.tags & e2.tags
-}
+-- check TagsBelongToOnlyOneCompany" {
+-- 	all disj e1, e2 : Company | no e1.tags & e2.tags
+-- }
 
-check CategoriesBelongToOnlyOneCompany" {
-	all disj e1, e2 : Company | no e1.categories & e2.categories
-}
-
-
-
+-- check CategoriesBelongToOnlyOneCompany" {
+-- 	all disj e1, e2 : Company | no e1.categories & e2.categories
+-- }
