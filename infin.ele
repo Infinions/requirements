@@ -53,6 +53,10 @@ pred userNotRegistered[u : User] {
 	u not in System.companies.users
 }
 
+pred companyInTheSystem[c : Company] {
+	c in System.companies
+}
+
 -- actions
 pred stutter {
 	System.companies' = System.companies
@@ -71,7 +75,7 @@ pred registerUser[u : User, c : Company] {
 
 pred addUserToCompany[u : User, c : Company] {
 	userNotRegistered[u]
-	c in System.companies -- Company must exist
+	companyInTheSystem[c]
 
 	c.users' = c.users + u
 	
