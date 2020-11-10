@@ -1,7 +1,11 @@
 -- signatures
-one sig System {
-	var companies: set Company
-}
+sig Company {
+	var users: set User,
+	var invoices: set Invoice,
+	var categories: set Category,
+	var tags: set Tag
+} 
+var sig Registered in Company {}
 
 sig User {}
 sig Tag {}
@@ -11,109 +15,174 @@ sig Category {
 	budget: lone Budget
 } 
 
-sig Company {
-	var users: set User,
-	categories: set Category,
-	tags: set Tag
-} 
 
 sig Invoice {
-	company: one Company,
-	category: lone Category,
-	tags: set Tag
+--	company: one Company,
+--	category: lone Category,
+--	tags: set Tag
 }
 
--- facts
--- fact "invoice tags must be tags from the company" {
--- 	all s : System | all i : Invoice | i.company in s.companies implies i.tags in i.company.tags
--- }
-
--- fact "invoice categories must be categories from the company" {
--- 	all s : System | all i : Invoice | i.company in s.companies implies i.category in i.company.categories
--- }
-
--- fact "a company must have a least one user" {
--- 	all s : System | all e : Company | e in s.companies implies some e.users
--- }
-
--- fact "budgests aren't shared" {
---	all s : System | all disj c, d : Category | (c + d) in s.companies.categories implies c.budget != d.budget
--- }
-
-
+-- preds
 pred emptyCompany[c : Company] {
 	some c
-	no c.tags -- new company must be empty
-	no c.categories	 -- new company must be empty
-	no c.users -- new company must be empty
-	c not in System.companies
+
+	no c.tags 
+	no c.categories	 
+	no c.users 
+	no c.invoices
 }
 
-pred userNotRegistered[u : User] {
-	u not in System.companies.users
+pred emptyInvoice[i : Invoice] {
+	some i
 }
 
-pred companyInTheSystem[c : Company] {
-	c in System.companies
+pred userRegistered[u : User] {
+	some c : Registered | u in c.users
+}
+
+pred companyRegistered[c : Company] {
+	c in Registered
+}
+
+pred invoiceProcessed[i : Invoice] {
+	some c : Registered | i in c.invoices
+}
+
+pred categoryRegistered[cat : Category] {
+	some c : Registered | cat in c.categories
+}
+
+pred companysCategory[cat : Category, c : Company] {
+ 	cat in c.categories
+}
+
+pred tagRegistered[t : Tag] {
+	some c : Registered | t in c.tags
+}
+
+pred companyTag[t : Tag, c : Company] {
+ 	t in c.tags
 }
 
 -- actions
 pred stutter {
-	System.companies' = System.companies
-	Company.users' = Company.users
+	Registered' = Registered
+	all c : Registered | c.users' = c.users and 
+                             c.invoices' = c.invoices and
+	                       c.categories' = c.categories and
+				     c.tags' = c.tags	
 }	
 	
 pred registerUser[u : User, c : Company] {
 	emptyCompany[c]
-	userNotRegistered[u]
+	not companyRegistered[c]
+	not userRegistered[u]
 	
-	c.users' = u
-	System.companies' = System.companies + c
-
-	Company.users' = Company.users + u
+	c.users' = c.users + u
+	Registered' = Registered + c
+	
+	Registered.invoices' = Registered.invoices
+	Registered.categories' = Registered.categories
+	Registered.tags' = Registered.tags
+	all c0 : Registered | c != c0 implies c.users' = c.users
 }
 
 pred addUserToCompany[u : User, c : Company] {
-	userNotRegistered[u]
-	companyInTheSystem[c]
+	not userRegistered[u]
+	companyRegistered[c]
 
 	c.users' = c.users + u
 	
-	Company.users' = Company.users + u
-	System.companies' = System.companies
+	Registered' = Registered
+	Registered.invoices' = Registered.invoices
+	Registered.categories' = Registered.categories
+	all c0 : Registered | (c != c0 implies c0.users' = c0.users)
 }
 
-fact traces {
-	no System.companies
+pred addInvoiceToCompany[i : Invoice, c : Company] {
+	companyRegistered[c]
+	not invoiceProcessed[i]
+	emptyInvoice[i]
 
-	no Invoice
-	no Category
+	c.invoices' = c.invoices + i
+	
+	Registered.users' = Registered.users
+	Registered.categories' = Registered.categories
+	Registered.tags' = Registered.tags
+	Registered' = Registered
+	all c0 : Registered | (c != c0 implies c0.invoices' = c0.invoices)
+}
+
+pred addCategoryToCompany[cat : Category, c : Company] {
+	companyRegistered[c]
+	not categoryRegistered[cat]
+
+	c.categories' = c.categories + cat
+	
+	Registered.users' = Registered.users
+	Registered.invoices' = Registered.invoices
+	Registered.tags' = Registered.tags
+	Registered' = Registered
+	all c0 : Registered | (c != c0 implies c0.categories' = c0.categories)
+}
+
+pred addTagToCompany[t : Tag, c : Company] {
+	companyRegistered[c]
+	not tagRegistered[t]
+
+	c.tags' = c.tags + t
+	
+	Registered.users' = Registered.users
+	Registered.invoices' = Registered.invoices
+	Registered.categories' = Registered.categories
+	Registered' = Registered
+	all c0 : Registered | (c != c0 implies c0.tags' = c0.tags)
+}
+
+
+fact traces {
+	no Registered
+
 	no Budget
-	no Tag
+
 
 	always (
-		some u : User | some c : Company |
-		registerUser[u, c] or addUserToCompany[u, c] or
-		stutter
+		some u : User | some c : Company | some i : Invoice | some cat : Category | some t : Tag |
+			registerUser[u, c] or addUserToCompany[u, c] or 
+			addInvoiceToCompany[i, c] or addCategoryToCompany[cat, c] or addTagToCompany[t, c] or
+			stutter
 	)
 }
 
-run { } for 3
+run { some c : Company | emptyCompany[c] } for 3
 
 
--- checks
--- check NoOrphanTags {
--- 	all t : Tag | some i : Invoice | t in i.tags
--- }
+check UsersBelongToOnlyOneCompany {
+	always (
+ 		all disj c1, c2 : Registered | no c1.users & c2.users
+	)
+}
 
--- check UsersBelongToOnlyOneCompany {
--- 	all disj e1, e2 : Company | no e1.users & e2.users
--- }
+check CompanyHasAtLeastOneUser {
+	always (
+		all c : Registered | some c.users
+	)
+}
 
--- check TagsBelongToOnlyOneCompany" {
--- 	all disj e1, e2 : Company | no e1.tags & e2.tags
--- }
+check InvoicesBelongToOnlyOneCompany {
+	always (
+ 		all disj c1, c2 : Registered | no c1.invoices & c2.invoices
+	)
+}
 
--- check CategoriesBelongToOnlyOneCompany" {
--- 	all disj e1, e2 : Company | no e1.categories & e2.categories
--- }
+check CategoriesBelongToOnlyOneCompany {
+	always (
+ 		all disj c1, c2 : Registered | no c1.categories & c2.categories
+	)
+}
+
+check TagsBelongToOnlyOneCompany {
+	always (
+ 		all disj c1, c2 : Registered | no c1.tags & c2.tags
+	)
+ }
