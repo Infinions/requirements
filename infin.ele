@@ -72,13 +72,11 @@ pred companyCategory[cat : Category, c : Company] {
  	cat in c.categories
 }
 
-pred tagRegistered[t : Tag] {
-	one t
+pred tagsRegistered[t : Tag] {
 	some c : Registered | t in c.tags
 }
 
-pred companyTag[t : Tag, c : Company] {
-	one t
+pred companyTags[t : Tag, c : Company] {
  	t in c.tags
 }
 
@@ -148,16 +146,17 @@ pred addUserToCompany[u : User, c : Company] {
 	all c0 : Company | c != c0 implies c0.users' = c0.users
 }
 
-pred addInvoiceToCompany[i : Invoice, c : Company, cat : Category] {
+pred addInvoiceToCompany[i : Invoice, c : Company, cat : Category, t : Tag] {
 	companyRegistered[c]
 	not invoiceProcessed[i]
 	emptyInvoice[i]
 	companyCategory[cat, c]
+	companyTags[t, c]
 
 	c.invoices' = c.invoices + i
 	i.company' = c
 	i.category' = cat
-	no i.tags -- change me
+	i.tags' = i.tags
 	
 	sameUsers
 	sameCategories
@@ -166,7 +165,8 @@ pred addInvoiceToCompany[i : Invoice, c : Company, cat : Category] {
 	sameRegistered
 	all c0 : Company | c != c0 implies c0.invoices' = c0.invoices
 	all i0 : Invoice | i != i0 implies i0.company' = i0.company and
-                                            i0.category' = i0.category
+                                            i0.category' = i0.category and
+							  i0.tags' = i0.tags
 }
 
 pred changeInvoiceCategory[i : Invoice, cat : Category] {
@@ -175,7 +175,7 @@ pred changeInvoiceCategory[i : Invoice, cat : Category] {
 
 	i.company' = i.company
 	i.category' = cat
-	i.tags' = i.tags -- change me
+	i.tags' = i.tags
 	
 	sameUsers
 	sameCategories
@@ -205,7 +205,7 @@ pred addCategoryToCompany[cat : Category, c : Company] {
 
 pred addTagToCompany[t : Tag, c : Company] {
 	companyRegistered[c]
-	not tagRegistered[t]
+	not tagsRegistered[t]
 
 	c.tags' = c.tags + t
 	
@@ -223,7 +223,7 @@ fact traces {
 	always (
 		some u : User | some c : Company | some i : Invoice | some t : Tag | some cat : Category |
 			registerUser[u, c] or addUserToCompany[u, c] or 
-		      addInvoiceToCompany[i, c, cat] or addTagToCompany[t, c] or addCategoryToCompany[cat, c] or
+		      addInvoiceToCompany[i, c, cat, t] or addTagToCompany[t, c] or addCategoryToCompany[cat, c] or
 			changeInvoiceCategory[i, cat] or
 			stutter
 	)
