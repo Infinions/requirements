@@ -203,8 +203,9 @@ pred addCategoryToCompany[cat : Category, c : Company] {
 	all c0 : Company | c != c0 implies c0.categories' = c0.categories
 }
 
-pred addTagToCompany[t : Tag, c : Company] {
+pred addTagsToCompany[t : Tag, c : Company] {
 	companyRegistered[c]
+	some t
 	not tagsRegistered[t]
 
 	c.tags' = c.tags + t
@@ -217,14 +218,55 @@ pred addTagToCompany[t : Tag, c : Company] {
 	all c0 : Company | c != c0 implies c0.tags' = c0.tags
 }
 
+pred addInvoiceTags[i : Invoice, t : Tag] {
+	invoiceProcessed[i]
+	some t
+	companyTags[t, i.company]
+	t not in i.tags
+
+	i.company' = i.company
+	i.category' = i.category
+	i.tags' = i.tags + t
+	
+	sameUsers
+	sameCategories
+	sameTags
+	sameBudgets
+	sameRegistered
+	all c : Company | c.invoices' = c.invoices
+	all i0 : Invoice | i != i0 implies i0.company' = i0.company and
+                                            i0.category' = i0.category and
+							  i0.tags' = i0.tags
+}
+
+pred removeInvoiceTags[i : Invoice, t : Tag] {
+	invoiceProcessed[i]
+	some t
+	t in i.tags
+
+	i.company' = i.company
+	i.category' = i.category
+	i.tags' = i.tags - t
+	
+	sameUsers
+	sameCategories
+	sameTags
+	sameBudgets
+	sameRegistered
+	all c : Company | c.invoices' = c.invoices
+	all i0 : Invoice | i != i0 implies i0.company' = i0.company and
+                                            i0.category' = i0.category and
+							  i0.tags' = i0.tags
+}
+
 
 fact traces {
 	no Registered
 	always (
 		some u : User | some c : Company | some i : Invoice | some t : Tag | some cat : Category |
 			registerUser[u, c] or addUserToCompany[u, c] or 
-		      addInvoiceToCompany[i, c, cat, t] or addTagToCompany[t, c] or addCategoryToCompany[cat, c] or
-			changeInvoiceCategory[i, cat] or
+		      addInvoiceToCompany[i, c, cat, t] or addTagsToCompany[t, c] or addCategoryToCompany[cat, c] or
+			changeInvoiceCategory[i, cat] or addInvoiceTags[i, t] or removeInvoiceTags[i, t] or
 			stutter
 	)
 }
