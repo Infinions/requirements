@@ -19,7 +19,7 @@ sig Category {
 sig Invoice {
 	var company: one Company,
 	var category: one Category,
---	var tags: set Tag
+	var tags: set Tag
 }
 
 -- preds
@@ -38,6 +38,7 @@ pred emptyInvoice[i : Invoice] {
 
 	no i.company
 	no i.category
+	no i.tags
 }
 
 pred emptyCategory[cat : Category] {
@@ -47,10 +48,12 @@ pred emptyCategory[cat : Category] {
 }
 
 pred userRegistered[u : User] {
+	one u
 	some c : Registered | u in c.users
 }
 
 pred companyRegistered[c : Company] {
+	one c
 	c in Registered
 }
 
@@ -87,7 +90,8 @@ pred sameUsers {
 pred sameInvoices {
 	all c : Company | c.invoices' = c.invoices
 	all c : Company | all i : c.invoices | i.company' = i.company and
-				                        i.category' = i.category 
+				                        i.category' = i.category and
+								i.tags' = i.tags
 }
 
 pred sameCategories {
@@ -153,6 +157,7 @@ pred addInvoiceToCompany[i : Invoice, c : Company, cat : Category] {
 	c.invoices' = c.invoices + i
 	i.company' = c
 	i.category' = cat
+	no i.tags -- change me
 	
 	sameUsers
 	sameCategories
@@ -170,6 +175,7 @@ pred changeInvoiceCategory[i : Invoice, cat : Category] {
 
 	i.company' = i.company
 	i.category' = cat
+	i.tags' = i.tags -- change me
 	
 	sameUsers
 	sameCategories
@@ -178,7 +184,8 @@ pred changeInvoiceCategory[i : Invoice, cat : Category] {
 	sameRegistered
 	all c : Company | c.invoices' = c.invoices
 	all i0 : Invoice | i != i0 implies i0.company' = i0.company and
-                                            i0.category' = i0.category
+                                            i0.category' = i0.category and
+							  i0.tags' = i0.tags
 }
 
 pred addCategoryToCompany[cat : Category, c : Company] {
@@ -277,5 +284,11 @@ check InvoiceCompanyIsConsistent {
 check InvoiceCategoryBelongsToCompany {
 	always (
 		all c : Registered | all i : c.invoices | one i.category and i.category in c.categories
+	)
+}
+
+check InvoiceTagsBelongToCompany {
+	always (
+		all c : Registered | all i : c.invoices | i.tags in c.tags
 	)
 }
