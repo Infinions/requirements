@@ -17,7 +17,7 @@ sig Category {
 
 
 sig Invoice {
-	--var company: one Company,
+	var company: one Company,
 --	var category: lone Category,
 --	var tags: set Tag
 }
@@ -36,6 +36,7 @@ pred emptyCompany[c : Company] {
 pred emptyInvoice[i : Invoice] {
 	one i
 
+	no i.company
 }
 
 pred emptyCategory[cat : Category] {
@@ -79,6 +80,7 @@ pred sameUsers {
 
 pred sameInvoices {
 	all c : Company | c.invoices' = c.invoices
+	all c : Company | all i : c.invoices | i.company' = i.company 
 }
 
 pred sameCategories {
@@ -141,6 +143,7 @@ pred addInvoiceToCompany[i : Invoice, c : Company] {
 	emptyInvoice[i]
 
 	c.invoices' = c.invoices + i
+	i.company = c
 	
 	sameUsers
 	sameCategories
@@ -148,6 +151,7 @@ pred addInvoiceToCompany[i : Invoice, c : Company] {
 	sameBudgets
 	sameRegistered
 	all c0 : Company | c != c0 implies c0.invoices' = c0.invoices
+	all i0 : Invoice | i != i0 implies i0.company' = i0.company
 }
 
 pred addCategoryToCompany[cat : Category, c : Company] {
@@ -233,5 +237,11 @@ check BudgetsBelongToOnlyOneCompany {
 check BudgetsBelongToOnlyOneCategory {
 	always (
 		all c : Registered | all disj cat1, cat2 : c.categories | no cat1.budget & cat2.budget
+	)
+}
+
+check InvoicesCompanyIsConsistent {
+	always (
+		all c : Registered | all i : c.invoices | one i.company and i.company = c
 	)
 }
