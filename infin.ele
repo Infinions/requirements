@@ -334,3 +334,9 @@ check InvoiceTagsBelongToCompany {
 		all c : Registered | all i : c.invoices | i.tags in c.tags
 	)
 }
+
+check UsersBelongsToOnlyOneCompany {
+	always (
+		all u : User | all c : Registered | u in c.users implies always u in c.users
+	)
+}
