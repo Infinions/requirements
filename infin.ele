@@ -18,7 +18,7 @@ sig Category {
 
 sig Invoice {
 	var company: one Company,
---	var category: lone Category,
+	var category: one Category,
 --	var tags: set Tag
 }
 
@@ -37,6 +37,7 @@ pred emptyInvoice[i : Invoice] {
 	one i
 
 	no i.company
+	no i.category
 }
 
 pred emptyCategory[cat : Category] {
@@ -54,22 +55,27 @@ pred companyRegistered[c : Company] {
 }
 
 pred invoiceProcessed[i : Invoice] {
+	one i
 	some c : Registered | i in c.invoices
 }
 
 pred categoryRegistered[cat : Category] {
+	one cat
 	some c : Registered | cat in c.categories
 }
 
-pred companysCategory[cat : Category, c : Company] {
+pred companyCategory[cat : Category, c : Company] {
+	one cat
  	cat in c.categories
 }
 
 pred tagRegistered[t : Tag] {
+	one t
 	some c : Registered | t in c.tags
 }
 
 pred companyTag[t : Tag, c : Company] {
+	one t
  	t in c.tags
 }
 
@@ -80,7 +86,8 @@ pred sameUsers {
 
 pred sameInvoices {
 	all c : Company | c.invoices' = c.invoices
-	all c : Company | all i : c.invoices | i.company' = i.company 
+	all c : Company | all i : c.invoices | i.company' = i.company and
+				                        i.category' = i.category 
 }
 
 pred sameCategories {
@@ -137,13 +144,15 @@ pred addUserToCompany[u : User, c : Company] {
 	all c0 : Company | c != c0 implies c0.users' = c0.users
 }
 
-pred addInvoiceToCompany[i : Invoice, c : Company] {
+pred addInvoiceToCompany[i : Invoice, c : Company, cat : Category] {
 	companyRegistered[c]
 	not invoiceProcessed[i]
 	emptyInvoice[i]
+	companyCategory[cat, c]
 
 	c.invoices' = c.invoices + i
-	i.company = c
+	i.company' = c
+	i.category' = cat
 	
 	sameUsers
 	sameCategories
@@ -151,7 +160,25 @@ pred addInvoiceToCompany[i : Invoice, c : Company] {
 	sameBudgets
 	sameRegistered
 	all c0 : Company | c != c0 implies c0.invoices' = c0.invoices
-	all i0 : Invoice | i != i0 implies i0.company' = i0.company
+	all i0 : Invoice | i != i0 implies i0.company' = i0.company and
+                                            i0.category' = i0.category
+}
+
+pred changeInvoiceCategory[i : Invoice, cat : Category] {
+	invoiceProcessed[i]
+	companyCategory[cat, i.company]
+
+	i.company' = i.company
+	i.category' = cat
+	
+	sameUsers
+	sameCategories
+	sameTags
+	sameBudgets
+	sameRegistered
+	all c : Company | c.invoices' = c.invoices
+	all i0 : Invoice | i != i0 implies i0.company' = i0.company and
+                                            i0.category' = i0.category
 }
 
 pred addCategoryToCompany[cat : Category, c : Company] {
@@ -188,8 +215,9 @@ fact traces {
 	no Registered
 	always (
 		some u : User | some c : Company | some i : Invoice | some t : Tag | some cat : Category |
-			 registerUser[u, c] or addUserToCompany[u, c] or 
-		       addInvoiceToCompany[i, c] or addTagToCompany[t, c] or addCategoryToCompany[cat, c] or
+			registerUser[u, c] or addUserToCompany[u, c] or 
+		      addInvoiceToCompany[i, c, cat] or addTagToCompany[t, c] or addCategoryToCompany[cat, c] or
+			changeInvoiceCategory[i, cat] or
 			stutter
 	)
 }
@@ -240,8 +268,14 @@ check BudgetsBelongToOnlyOneCategory {
 	)
 }
 
-check InvoicesCompanyIsConsistent {
+check InvoiceCompanyIsConsistent {
 	always (
 		all c : Registered | all i : c.invoices | one i.company and i.company = c
+	)
+}
+
+check InvoiceCategoryBelongsToCompany {
+	always (
+		all c : Registered | all i : c.invoices | one i.category and i.category in c.categories
 	)
 }
